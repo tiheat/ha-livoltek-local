@@ -78,6 +78,7 @@ Cada push ou merge na `main` que passa na CI gera uma versão automaticamente co
 | `BREAKING CHANGE:` no rodapé, ou `feat!:` | major (**2**.0.0) |
 | `docs:`, `chore:`, `test:`, `ci:`, `style:` | sem nova versão |
 
-O job `release` atualiza a versão no `manifest.json` e no `pyproject.toml`, cria o commit
-`chore: release X.Y.Z`, a tag `vX.Y.Z` e a release no GitHub com as notas geradas dos commits e o
-`livoltek_local.zip` anexado (usado pelo Marketplace/HACS para instalar e atualizar).
+O job `release` atualiza a versão no `manifest.json` e no `pyproject.toml`, acrescenta as notas da versão no
+topo do [`CHANGELOG.md`](CHANGELOG.md) e commita os três arquivos direto na `main` (`chore: release X.Y.Z`).
+Em seguida cria a tag `vX.Y.Z` e a release no GitHub com as mesmas notas e o `livoltek_local.zip` anexado
+(usado pelo Marketplace/HACS para instalar e atualizar).
