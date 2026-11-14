@@ -2,6 +2,7 @@
 python = "3.13"
 ruff = "latest"
 "pipx:pytest" = "latest"
+resvg = "latest"
 
 [tasks.lint]
 description = "Ruff lint and format check"
@@ -26,3 +27,14 @@ COPYFILE_DISABLE=1 tar -C custom_components --exclude='__pycache__' -cf - livolt
 [tasks.restart]
 description = "Validate config and restart Home Assistant Core"
 run = "ssh ha '. /etc/profile.d/homeassistant.sh && ha core check && ha core restart'"
+
+[tasks.icons]
+description = "Render the brand PNGs (256 and 512 px, light and dark) from assets/*.svg"
+run = """
+set -euo pipefail
+out=custom_components/livoltek_local/brand
+resvg -w 256 -h 256 assets/icon-light.svg $out/icon.png
+resvg -w 512 -h 512 assets/icon-light.svg $out/icon@2x.png
+resvg -w 256 -h 256 assets/icon-dark.svg $out/dark_icon.png
+resvg -w 512 -h 512 assets/icon-dark.svg $out/dark_icon@2x.png
+"""

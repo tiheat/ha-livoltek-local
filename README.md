@@ -30,9 +30,20 @@ A potência é um registrador de 16 bits com escala 0,1 W, então vai até 6553 
 
 ## Instalação
 
-Requer Home Assistant 2025.8 ou superior.
+Requer Home Assistant 2025.8 ou superior. O ícone da integração (pasta `brand/`) aparece a partir do 2026.3;
+os SVGs de origem ficam em `assets/` (`mise run icons` gera os PNGs).
 
-**Via SSH (este repositório):** com o host `ha` configurado no `~/.ssh/config`:
+**Via Marketplace (Home Assistant 2026.11+) ou HACS (recomendado):**
+
+1. Em *Configurações → Marketplace* (ou HACS, em versões anteriores), abra *Repositórios customizados* e adicione
+   `https://github.com/tiheat/ha-livoltek-local` com a categoria *Integração*.
+2. Instale **Livoltek Local** e reinicie o Home Assistant.
+3. Em *Configurações → Dispositivos e serviços → Adicionar integração*, procure **Livoltek Local** e informe
+   o IP do módulo Wi-Fi (porta 502, ID Modbus 1).
+
+Novas versões aparecem como atualização no próprio Home Assistant, a partir das releases deste repositório.
+
+**Via SSH (desenvolvimento):** com o host `ha` configurado no `~/.ssh/config`, copie o código local e reinicie:
 
 ```bash
 mise run deploy
@@ -42,8 +53,7 @@ mise run deploy
 mise run restart
 ```
 
-Depois, em *Configurações → Dispositivos e serviços → Adicionar integração*, procure **Livoltek Local** e informe
-o IP do módulo Wi-Fi (porta 502, ID Modbus 1). O intervalo de leitura pode ser ajustado em *Configurar*.
+O intervalo de leitura pode ser ajustado em *Configurar* na integração.
 
 ## Desenvolvimento
 
@@ -69,4 +79,5 @@ Cada push ou merge na `main` que passa na CI gera uma versão automaticamente co
 | `docs:`, `chore:`, `test:`, `ci:`, `style:` | sem nova versão |
 
 O job `release` atualiza a versão no `manifest.json` e no `pyproject.toml`, cria o commit
-`chore: release X.Y.Z`, a tag `vX.Y.Z` e a release no GitHub com as notas geradas dos commits.
+`chore: release X.Y.Z`, a tag `vX.Y.Z` e a release no GitHub com as notas geradas dos commits e o
+`livoltek_local.zip` anexado (usado pelo Marketplace/HACS para instalar e atualizar).
