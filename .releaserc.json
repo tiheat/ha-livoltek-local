@@ -31,6 +31,13 @@
       }
     ],
     [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md",
+        "changelogTitle": "# Changelog"
+      }
+    ],
+    [
       "@semantic-release/exec",
       {
         "prepareCmd": "python3 scripts/set_version.py ${nextRelease.version} && cd custom_components/livoltek_local && zip -r ../../livoltek_local.zip . -x '__pycache__/*'"
@@ -40,6 +47,7 @@
       "@semantic-release/git",
       {
         "assets": [
+          "CHANGELOG.md",
           "custom_components/livoltek_local/manifest.json",
           "pyproject.toml"
         ],
