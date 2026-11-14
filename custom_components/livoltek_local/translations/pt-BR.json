@@ -1,0 +1,49 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Livoltek Local",
+        "description": "Informe o endereço do módulo Wi-Fi do inversor (servidor Modbus TCP, normalmente na porta 502).",
+        "data": {
+          "host": "Endereço",
+          "port": "Porta",
+          "unit_id": "ID Modbus do inversor"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Não foi possível conectar ao módulo Wi-Fi.",
+      "invalid_response": "O dispositivo respondeu com uma mensagem Modbus inesperada."
+    },
+    "abort": {
+      "already_configured": "Este inversor já está configurado."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Leitura",
+        "description": "Cada leitura usa uma única requisição Modbus. Intervalos menores podem atrapalhar o envio de dados para a nuvem da Livoltek.",
+        "data": {
+          "scan_interval": "Intervalo de leitura"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "ac_power": { "name": "Potência CA" },
+      "energy_today": { "name": "Energia hoje" },
+      "frequency": { "name": "Frequência" },
+      "pv1_voltage": { "name": "String 1 tensão" },
+      "pv1_current": { "name": "String 1 corrente" },
+      "pv1_power": { "name": "String 1 potência" },
+      "pv2_voltage": { "name": "String 2 tensão" },
+      "pv2_current": { "name": "String 2 corrente" },
+      "pv2_power": { "name": "String 2 potência" },
+      "temperature": { "name": "Temperatura" },
+      "status": { "name": "Estado" },
+      "power_factor": { "name": "Fator de potência" }
+    }
+  }
+}

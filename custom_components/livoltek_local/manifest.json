@@ -1,0 +1,14 @@
+{
+  "domain": "livoltek_local",
+  "name": "Livoltek Local",
+  "codeowners": [
+    "@tiheat"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/tiheat/ha-livoltek-local",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/tiheat/ha-livoltek-local/issues",
+  "requirements": [],
+  "version": "0.0.0"
+}

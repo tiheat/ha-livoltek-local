@@ -1,0 +1,28 @@
+[tools]
+python = "3.13"
+ruff = "latest"
+"pipx:pytest" = "latest"
+
+[tasks.lint]
+description = "Ruff lint and format check"
+run = ["ruff check .", "ruff format --check ."]
+
+[tasks.format]
+description = "Format code with ruff"
+run = ["ruff format .", "ruff check --fix ."]
+
+[tasks.test]
+description = "Run unit tests"
+run = "pytest -q"
+
+[tasks.deploy]
+description = "Copy the integration to the Home Assistant host over SSH (host alias 'ha')"
+run = """
+set -euo pipefail
+COPYFILE_DISABLE=1 tar -C custom_components --exclude='__pycache__' -cf - livoltek_local \
+  | ssh ha 'sudo rm -rf /config/custom_components/livoltek_local && sudo mkdir -p /config/custom_components && sudo tar -C /config/custom_components -xf - && ls /config/custom_components/livoltek_local'
+"""
+
+[tasks.restart]
+description = "Validate config and restart Home Assistant Core"
+run = "ssh ha '. /etc/profile.d/homeassistant.sh && ha core check && ha core restart'"

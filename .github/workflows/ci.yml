@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: mise run lint
+      - run: mise run test
+
+  release:
+    # Every push/merge to main that passes the checks gets a version from the
+    # conventional commits since the last tag: fix -> patch, feat -> minor, BREAKING CHANGE -> major.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [hassfest, lint-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14"
+      - name: semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          npx --yes
+          -p semantic-release@25.0.9
+          -p @semantic-release/exec@7.1.0
+          -p @semantic-release/git@11.0.1
+          -p conventional-changelog-conventionalcommits@10.4.1
+          semantic-release

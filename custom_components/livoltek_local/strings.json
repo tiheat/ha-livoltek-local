@@ -1,0 +1,49 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Livoltek Local",
+        "description": "Enter the address of the inverter's Wi-Fi module (Modbus TCP server, usually port 502).",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "unit_id": "Modbus unit ID"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the Wi-Fi module.",
+      "invalid_response": "The device answered with an unexpected Modbus response."
+    },
+    "abort": {
+      "already_configured": "This inverter is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Polling",
+        "description": "Each read uses a single Modbus request. Shorter intervals may disturb the upload to the Livoltek cloud.",
+        "data": {
+          "scan_interval": "Polling interval"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "ac_power": { "name": "AC power" },
+      "energy_today": { "name": "Energy today" },
+      "frequency": { "name": "Frequency" },
+      "pv1_voltage": { "name": "String 1 voltage" },
+      "pv1_current": { "name": "String 1 current" },
+      "pv1_power": { "name": "String 1 power" },
+      "pv2_voltage": { "name": "String 2 voltage" },
+      "pv2_current": { "name": "String 2 current" },
+      "pv2_power": { "name": "String 2 power" },
+      "temperature": { "name": "Temperature" },
+      "status": { "name": "Status" },
+      "power_factor": { "name": "Power factor" }
+    }
+  }
+}
