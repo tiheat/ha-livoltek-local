@@ -112,16 +112,88 @@ def test_async_read_end_to_end():
     assert asyncio.run(run()).ac_power == 4175.0
 
 
-def test_async_read_inverter_off_raises_modbus_error():
+def _ok_pdu(count):
+    return bytes([0x03, count * 2]) + struct.pack(f">{count}H", *sample_registers())
+
+
+def test_async_read_inverter_off_raises_modbus_error_without_retry():
+    connections = []
+
+    async def handler(reader, writer):
+        connections.append(1)
+        await _respond_with(lambda count: bytes([0x83, 0x0B]))(reader, writer)
+
     async def run():
-        server, port = await _serve(_respond_with(lambda count: bytes([0x83, 0x0B])))
+        server, port = await _serve(handler)
         async with server:
-            await async_read("127.0.0.1", port, 1, timeout=2)
+            await async_read("127.0.0.1", port, 1, timeout=2, retry_delay=0)
 
     with pytest.raises(LivoltekModbusError):
         asyncio.run(run())
+    assert len(connections) == 1
+
+
+def test_async_read_skips_reply_to_another_request():
+    """The Wi-Fi module sometimes hands us the answer to its own cloud polling first."""
+
+    async def handler(reader, writer):
+        request = await reader.readexactly(12)
+        tid, _proto, _length, unit, _fc, _address, count = struct.unpack(">HHHBBHH", request)
+        other = bytes([0x03, 4]) + struct.pack(">2H", 1, 2)
+        writer.write(struct.pack(">HHHB", (tid + 1) & 0xFFFF, 0, len(other) + 1, unit) + other)
+        pdu = _ok_pdu(count)
+        writer.write(struct.pack(">HHHB", tid, 0, len(pdu) + 1, unit) + pdu)
+        await writer.drain()
+        writer.close()
+
+    async def run():
+        server, port = await _serve(handler)
+        async with server:
+            return await async_read("127.0.0.1", port, 1, timeout=2, retries=0)
+
+    assert asyncio.run(run()).ac_power == 4175.0
+
+
+def test_async_read_retries_after_invalid_reply():
+    connections = []
+
+    async def handler(reader, writer):
+        connections.append(1)
+        if len(connections) == 1:
+            await reader.readexactly(12)
+            writer.write(b"\x00\x01\x12\x34\x00\x00\x01")  # garbage header: protocol != 0
+            await writer.drain()
+            writer.close()
+            return
+        await _respond_with(_ok_pdu)(reader, writer)
+
+    async def run():
+        server, port = await _serve(handler)
+        async with server:
+            return await async_read("127.0.0.1", port, 1, timeout=2, retry_delay=0)
+
+    assert asyncio.run(run()).ac_power == 4175.0
+    assert len(connections) == 2
+
+
+def test_async_read_gives_up_after_retries():
+    connections = []
+
+    async def handler(reader, writer):
+        connections.append(1)
+        await reader.readexactly(12)
+        writer.close()  # closes without answering
+
+    async def run():
+        server, port = await _serve(handler)
+        async with server:
+            await async_read("127.0.0.1", port, 1, timeout=1, retries=2, retry_delay=0)
+
+    with pytest.raises(LivoltekConnectionError):
+        asyncio.run(run())
+    assert len(connections) == 3
 
 
 def test_async_read_unreachable_raises_connection_error():
     with pytest.raises(LivoltekConnectionError):
-        asyncio.run(async_read("127.0.0.1", 1, 1, timeout=1))
+        asyncio.run(async_read("127.0.0.1", 1, 1, timeout=1, retry_delay=0))

@@ -40,6 +40,10 @@ class LivoltekConnectionError(LivoltekError):
     """The Wi-Fi module could not be reached or did not answer in time."""
 
 
+class LivoltekProtocolError(LivoltekError):
+    """The answer was not a valid reply to our request (usually a collision with the module's own polling)."""
+
+
 class LivoltekModbusError(LivoltekError):
     """The inverter answered with a Modbus exception (for example, it is off at night)."""
 
@@ -61,10 +65,10 @@ def parse_response(pdu: bytes, count: int) -> list[int]:
     if function & 0x80:
         raise LivoltekModbusError(pdu[1] if len(pdu) > 1 else 0)
     if function != FUNCTION_READ_HOLDING:
-        raise LivoltekError(f"Unexpected function code {function:#04x}")
+        raise LivoltekProtocolError(f"Unexpected function code {function:#04x}")
     byte_count = pdu[1]
     if byte_count != count * 2 or len(pdu) < 2 + byte_count:
-        raise LivoltekError(f"Unexpected payload size {byte_count} for {count} registers")
+        raise LivoltekProtocolError(f"Unexpected payload size {byte_count} for {count} registers")
     return list(struct.unpack(f">{count}H", pdu[2 : 2 + byte_count]))
 
 
@@ -82,15 +86,22 @@ async def read_holding_registers(
     except (TimeoutError, OSError) as err:
         raise LivoltekConnectionError(f"Cannot connect to {host}:{port}: {err}") from err
 
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
     transaction_id = random.randint(1, 0xFFFF)
     try:
         writer.write(build_request(transaction_id, unit_id, address, count))
         await writer.drain()
-        header = await asyncio.wait_for(reader.readexactly(7), timeout)
-        rx_id, protocol, length, _unit = struct.unpack(">HHHB", header)
-        if rx_id != transaction_id or protocol != 0 or length < 2:
-            raise LivoltekError("Malformed Modbus TCP header")
-        pdu = await asyncio.wait_for(reader.readexactly(length - 1), timeout)
+        while True:
+            header = await asyncio.wait_for(reader.readexactly(7), max(deadline - loop.time(), 0.01))
+            rx_id, protocol, length, _unit = struct.unpack(">HHHB", header)
+            if protocol != 0 or not 2 <= length <= 260:
+                raise LivoltekProtocolError(f"Malformed Modbus TCP header (protocol {protocol}, length {length})")
+            pdu = await asyncio.wait_for(reader.readexactly(length - 1), max(deadline - loop.time(), 0.01))
+            if rx_id == transaction_id:
+                break
+            # A reply to another request: the Wi-Fi module also polls the inverter for its cloud upload,
+            # and sometimes hands us that answer. Skip it and keep waiting for ours until the deadline.
     except (TimeoutError, OSError, asyncio.IncompleteReadError) as err:
         raise LivoltekConnectionError(f"No answer from {host}:{port}: {err}") from err
     finally:
@@ -149,6 +160,25 @@ def decode(registers: list[int]) -> LivoltekData:
     )
 
 
-async def async_read(host: str, port: int, unit_id: int, timeout: float = 5.0) -> LivoltekData:
-    """Read and decode the inverter block in a single request."""
-    return decode(await read_holding_registers(host, port, unit_id, BLOCK_START, BLOCK_COUNT, timeout))
+async def async_read(
+    host: str,
+    port: int,
+    unit_id: int,
+    timeout: float = 5.0,
+    retries: int = 2,
+    retry_delay: float = 1.5,
+) -> LivoltekData:
+    """Read and decode the inverter block in a single request.
+
+    Connection failures and invalid replies (collisions with the Wi-Fi module's own polling) are retried
+    with a fresh connection. Modbus exceptions are not: they mean the inverter itself did not answer,
+    which is the normal state at night.
+    """
+    for attempt in range(retries + 1):
+        try:
+            return decode(await read_holding_registers(host, port, unit_id, BLOCK_START, BLOCK_COUNT, timeout))
+        except (LivoltekConnectionError, LivoltekProtocolError):
+            if attempt == retries:
+                raise
+            await asyncio.sleep(retry_delay)
+    raise AssertionError("unreachable")
